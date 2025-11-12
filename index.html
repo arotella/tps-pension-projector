@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS Pension Cost Projector</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .value-display {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-export {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background: #218838;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .info-box strong {
+            color: #1976D2;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .data-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 TPS Pension Cost Projector</h1>
+            <p>Analyze the relationship between SCAPE discount rates and employer contribution costs</p>
+        </div>
+        
+        <div class="content">
+            <!-- Historical Relationship Section -->
+            <div class="section">
+                <h2>1. Historical SCAPE vs Employer Contribution Rate</h2>
+                <div class="info-box">
+                    <strong>Key Insight:</strong> As the SCAPE discount rate falls (lower economic growth assumptions), 
+                    TPS employer contributions rise sharply. The three anchor points show this inverse relationship.
+                </div>
+                <div class="chart-container">
+                    <canvas id="historicalChart"></canvas>
+                </div>
+                <button class="btn-export" onclick="exportChart('historicalChart', 'TPS_Historical_Relationship')">
+                    📥 Export PNG
+                </button>
+            </div>
+            
+            <!-- Scenario Simulation Section -->
+            <div class="section">
+                <h2>2. Scenario Simulation</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>
+                            SCAPE Rate (CPI + x%)
+                            <span class="value-display" id="scapeDisplay">2.4%</span>
+                        </label>
+                        <input type="range" id="scapeSlider" min="0.5" max="4.0" step="0.1" value="2.4">
+                        <small>Adjust the SCAPE discount rate above CPI</small>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            Long-run GDP Growth
+                            <span class="value-display" id="gdpDisplay">1.5%</span>
+                        </label>
+                        <input type="range" id="gdpSlider" min="0.5" max="3.5" step="0.1" value="1.5">
+                        <small>Economic growth assumption (affects SCAPE)</small>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>Predicted Employer Contribution Rate:</strong> 
+                    <span id="predictedRate" style="font-size: 1.3em; color: #667eea; font-weight: bold;">23.7%</span>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="scenarioChart"></canvas>
+                </div>
+                <button class="btn-export" onclick="exportChart('scenarioChart', 'TPS_Scenario_Analysis')">
+                    📥 Export PNG
+                </button>
+            </div>
+            
+            <!-- Future Projections Section -->
+            <div class="section">
+                <h2>3. Future Projections (10-Year Outlook)</h2>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="updateProjection('flat')">Flat Scenario</button>
+                    <button class="btn-primary" onclick="updateProjection('improving')">Improving Economy</button>
+                    <button class="btn-primary" onclick="updateProjection('worsening')">Worsening Economy</button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="projectionChart"></canvas>
+                </div>
+                <button class="btn-export" onclick="exportChart('projectionChart', 'TPS_Future_Projection')">
+                    📥 Export PNG
+                </button>
+            </div>
+            
+            <!-- Financial Impact Section -->
+            <div class="section">
+                <h2>4. Institutional Financial Impact</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>TPS-Eligible Payroll (£ million)</label>
+                        <input type="number" id="payrollInput" value="50" min="1" max="500" step="1">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Total Institutional Expenditure (£ million)</label>
+                        <input type="number" id="expenditureInput" value="200" min="1" max="2000" step="1">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="loadNorthumbriaData()">
+                        🏛️ Load Northumbria (est.)
+                    </button>
+                    <button class="btn-primary" onclick="calculateImpact()">
+                        Calculate Impact
+                    </button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="impactChart"></canvas>
+                </div>
+                <button class="btn-export" onclick="exportChart('impactChart', 'TPS_Financial_Impact')">
+                    📥 Export PNG
+                </button>
+                
+                <table class="data-table" id="impactTable">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Contribution Rate</th>
+                            <th>Pension Bill (£m)</th>
+                            <th>% of Total Expenditure</th>
+                        </tr>
+                    </thead>
+                    <tbody id="impactTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Historical data points (Year, SCAPE rate above CPI, Employer contribution rate)
+        const historicalData = [
+            { year: 2015, scape: 3.0, rate: 16.48 },
+            { year: 2019, scape: 2.4, rate: 23.68 },
+            { year: 2024, scape: 1.7, rate: 28.68 }
+        ];
+        
+        // Calculate linear regression
+        function linearRegression(data) {
+            const n = data.length;
+            const sumX = data.reduce((sum, d) => sum + d.scape, 0);
+            const sumY = data.reduce((sum, d) => sum + d.rate, 0);
+            const sumXY = data.reduce((sum, d) => sum + d.scape * d.rate, 0);
+            const sumXX = data.reduce((sum, d) => sum + d.scape * d.scape, 0);
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            
+            // Calculate residuals for confidence bands
+            const predictions = data.map(d => slope * d.scape + intercept);
+            const residuals = data.map((d, i) => d.rate - predictions[i]);
+            const mse = residuals.reduce((sum, r) => sum + r * r, 0) / (n - 2);
+            const se = Math.sqrt(mse);
+            
+            return { slope, intercept, se };
+        }
+        
+        const regression = linearRegression(historicalData);
+        
+        // Predict employer contribution rate from SCAPE
+        function predictRate(scape) {
+            return regression.slope * scape + regression.intercept;
+        }
+        
+        // Initialize charts
+        let charts = {};
+        
+        // Historical Chart
+        function createHistoricalChart() {
+            const ctx = document.getElementById('historicalChart').getContext('2d');
+            
+            // Generate fitted line and confidence bands
+            const scapeRange = [];
+            const fittedLine = [];
+            const upperBand = [];
+            const lowerBand = [];
+            
+            for (let s = 0.5; s <= 4.0; s += 0.1) {
+                scapeRange.push(s);
+                const pred = predictRate(s);
+                fittedLine.push(pred);
+                upperBand.push(pred + 1.96 * regression.se);
+                lowerBand.push(pred - 1.96 * regression.se);
+            }
+            
+            charts.historical = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Historical Data',
+                            data: historicalData.map(d => ({ x: d.scape, y: d.rate })),
+                            backgroundColor: '#667eea',
+                            borderColor: '#667eea',
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        },
+                        {
+                            label: 'Fitted Line',
+                            data: scapeRange.map((s, i) => ({ x: s, y: fittedLine[i] })),
+                            type: 'line',
+                            borderColor: '#764ba2',
+                            borderWidth: 3,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: '95% Confidence Band',
+                            data: scapeRange.map((s, i) => ({ x: s, y: upperBand[i] })),
+                            type: 'line',
+                            borderColor: 'rgba(118, 75, 162, 0.3)',
+                            borderWidth: 1,
+                            fill: '+1',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            pointRadius: 0
+                        },
+                        {
+                            label: '',
+                            data: scapeRange.map((s, i) => ({ x: s, y: lowerBand[i] })),
+                            type: 'line',
+                            borderColor: 'rgba(118, 75, 162, 0.3)',
+                            borderWidth: 1,
+                            fill: false,
+                            pointRadius: 0,
+                            showLine: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'SCAPE Discount Rate vs TPS Employer Contribution',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            display: true,
+                            labels: {
+                                filter: (item) => item.text !== ''
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = historicalData.find(d => 
+                                        Math.abs(d.scape - context.parsed.x) < 0.01 && 
+                                        Math.abs(d.rate - context.parsed.y) < 0.01
+                                    );
+                                    if (point) {
+                                        return `${point.year}: SCAPE CPI+${point.scape}%, Rate ${point.rate}%`;
+                                    }
+                                    return `SCAPE: CPI+${context.parsed.x.toFixed(1)}%, Rate: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'SCAPE Discount Rate (CPI + x%)',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            min: 0.5,
+                            max: 4.0
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Employer Contribution Rate (%)',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            min: 10,
+                            max: 35
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Scenario Chart
+        function createScenarioChart() {
+            const ctx = document.getElementById('scenarioChart').getContext('2d');
+            
+            charts.scenario = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Historical Data',
+                            data: [],
+                            backgroundColor: '#667eea',
+                            borderColor: '#667eea',
+                            pointRadius: 8
+                        },
+                        {
+                            label: 'Current Simulation',
+                            data: [],
+                            backgroundColor: '#ff6b6b',
+                            borderColor: '#ff6b6b',
+                            pointRadius: 12,
+                            pointStyle: 'star'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Scenario Analysis',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'SCAPE Rate (CPI + x%)',
+                                font: { size: 14 }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Employer Contribution Rate (%)',
+                                font: { size: 14 }
+                            },
+                            min: 10,
+                            max: 35
+                        }
+                    }
+                }
+            });
+            
+            updateScenarioChart();
+        }
+        
+        function updateScenarioChart() {
+            const scapeValue = parseFloat(document.getElementById('scapeSlider').value);
+            const predicted = predictRate(scapeValue);
+            
+            document.getElementById('scapeDisplay').textContent = scapeValue.toFixed(1) + '%';
+            document.getElementById('predictedRate').textContent = predicted.toFixed(2) + '%';
+            
+            charts.scenario.data.labels = historicalData.map(d => d.scape.toFixed(1)).concat([scapeValue.toFixed(1)]);
+            charts.scenario.data.datasets[0].data = historicalData.map(d => d.rate);
+            charts.scenario.data.datasets[1].data = new Array(historicalData.length).fill(null).concat([predicted]);
+            
+            charts.scenario.update();
+        }
+        
+        // Projection Chart
+        function createProjectionChart() {
+            const ctx = document.getElementById('projectionChart').getContext('2d');
+            
+            charts.projection = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'SCAPE Rate Projection',
+                            data: [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Employer Contribution Rate',
+                            data: [],
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '10-Year Projection',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'SCAPE Rate (CPI + x%)',
+                                font: { size: 12 }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Contribution Rate (%)',
+                                font: { size: 12 }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            updateProjection('flat');
+        }
+        
+        function updateProjection(scenario) {
+            const currentYear = 2024;
+            const years = [];
+            const scapeRates = [];
+            const contribRates = [];
+            
+            let currentScape = 1.7;
+            let drift = 0;
+            
+            if (scenario === 'improving') drift = 0.15;
+            if (scenario === 'worsening') drift = -0.15;
+            
+            for (let i = 0; i <= 10; i++) {
+                years.push(currentYear + i);
+                scapeRates.push(currentScape);
+                contribRates.push(predictRate(currentScape));
+                currentScape = Math.max(0.5, Math.min(4.0, currentScape + drift));
+            }
+            
+            charts.projection.data.labels = years;
+            charts.projection.data.datasets[0].data = scapeRates;
+            charts.projection.data.datasets[1].data = contribRates;
+            charts.projection.update();
+        }
+        
+        // Impact Chart
+        function createImpactChart() {
+            const ctx = document.getElementById('impactChart').getContext('2d');
+            
+            charts.impact = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Pension Bill (£m)',
+                            data: [],
+                            backgroundColor: '#667eea',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '% of Total Expenditure',
+                            data: [],
+                            backgroundColor: '#764ba2',
+                            yAxisID: 'y1',
+                            type: 'line',
+                            borderColor: '#764ba2',
+                            borderWidth: 3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Projected Pension Costs',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Pension Bill (£ million)',
+                                font: { size: 12 }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '% of Total Expenditure',
+                                font: { size: 12 }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function calculateImpact() {
+            const payroll = parseFloat(document.getElementById('payrollInput').value);
+            const expenditure = parseFloat(document.getElementById('expenditureInput').value);
+            
+            const currentYear = 2024;
+            const years = [];
+            const pensionBills = [];
+            const percentages = [];
+            
+            let currentScape = parseFloat(document.getElementById('scapeSlider').value);
+            
+            const tableBody = document.getElementById('impactTableBody');
+            tableBody.innerHTML = '';
+            
+            for (let i = 0; i <= 10; i++) {
+                const year = currentYear + i;
+                const contribRate = predictRate(currentScape) / 100;
+                const pensionBill = payroll * contribRate;
+                const percentage = (pensionBill / expenditure) * 100;
+                
+                years.push(year);
+                pensionBills.push(pensionBill.toFixed(2));
+                percentages.push(percentage.toFixed(2));
+                
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = year;
+                row.insertCell(1).textContent = (contribRate * 100).toFixed(2) + '%';
+                row.insertCell(2).textContent = '£' + pensionBill.toFixed(2);
+                row.insertCell(3).textContent = percentage.toFixed(2) + '%';
+                
+                // Small drift for projection
+                currentScape = Math.max(0.5, Math.min(4.0, currentScape - 0.05));
+            }
+            
+            charts.impact.data.labels = years;
+            charts.impact.data.datasets[0].data = pensionBills;
+            charts.impact.data.datasets[1].data = percentages;
+            charts.impact.update();
+        }
+        
+        function loadNorthumbriaData() {
+            document.getElementById('payrollInput').value = 65;
+            document.getElementById('expenditureInput').value = 250;
+            calculateImpact();
+        }
+        
+        function exportChart(chartId, filename) {
+            const canvas = document.getElementById(chartId);
+            const url = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = filename + '.png';
+            link.href = url;
+            link.click();
+        }
+        
+        // Event listeners
+        document.getElementById('scapeSlider').addEventListener('input', updateScenarioChart);
+        document.getElementById('gdpSlider').addEventListener('input', function() {
+            const gdp = parseFloat(this.value);
+            document.getElementById('gdpDisplay').textContent = gdp.toFixed(1) + '%';
+            // Rough approximation: SCAPE ≈ GDP growth * 0.7
+            const impliedScape = gdp * 0.7;
+            document.getElementById('scapeSlider').value = impliedScape;
+            updateScenarioChart();
+        });
+        
+        // Initialize all charts
+        window.addEventListener('load', function() {
+            createHistoricalChart();
+            createScenarioChart();
+            createProjectionChart();
+            createImpactChart();
+            calculateImpact();
+        });
+    </script>
+</body>
+</html>
