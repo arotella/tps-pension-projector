@@ -99,14 +99,6 @@
             margin: 10px 0;
         }
         
-        .control-group input[type="number"] {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 4px;
-            font-size: 1em;
-        }
-        
         .value-display {
             display: inline-block;
             background: #667eea;
@@ -145,15 +137,6 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
         
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-        
         .btn-export {
             background: #28a745;
             color: white;
@@ -173,33 +156,6 @@
         
         .info-box strong {
             color: #1976D2;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .data-table th {
-            background: #667eea;
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
-        
-        .data-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .data-table tr:hover {
-            background: #f8f9fa;
         }
     </style>
 </head>
@@ -277,51 +233,6 @@
                 <button class="btn-export" onclick="exportChart('projectionChart', 'TPS_Future_Projection')">
                     📥 Export PNG
                 </button>
-            </div>
-            
-            <!-- Financial Impact Section -->
-            <div class="section">
-                <h2>4. Institutional Financial Impact</h2>
-                <div class="controls">
-                    <div class="control-group">
-                        <label>TPS-Eligible Payroll (£ million)</label>
-                        <input type="number" id="payrollInput" value="50" min="1" max="500" step="1">
-                    </div>
-                    
-                    <div class="control-group">
-                        <label>Total Institutional Expenditure (£ million)</label>
-                        <input type="number" id="expenditureInput" value="200" min="1" max="2000" step="1">
-                    </div>
-                </div>
-                
-                <div class="button-group">
-                    <button class="btn-secondary" onclick="loadNorthumbriaData()">
-                        🏛️ Load Northumbria (est.)
-                    </button>
-                    <button class="btn-primary" onclick="calculateImpact()">
-                        Calculate Impact
-                    </button>
-                </div>
-                
-                <div class="chart-container">
-                    <canvas id="impactChart"></canvas>
-                </div>
-                <button class="btn-export" onclick="exportChart('impactChart', 'TPS_Financial_Impact')">
-                    📥 Export PNG
-                </button>
-                
-                <table class="data-table" id="impactTable">
-                    <thead>
-                        <tr>
-                            <th>Year</th>
-                            <th>Contribution Rate</th>
-                            <th>Pension Bill (£m)</th>
-                            <th>% of Total Expenditure</th>
-                        </tr>
-                    </thead>
-                    <tbody id="impactTableBody">
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>
@@ -472,8 +383,8 @@
                                 text: 'Employer Contribution Rate (%)',
                                 font: { size: 14, weight: 'bold' }
                             },
-                            min: 10,
-                            max: 35
+                            min: 0,
+                            max: 50
                         }
                     }
                 }
@@ -531,7 +442,7 @@
                                 font: { size: 14 }
                             },
                             min: 0,
-                            max: 100
+                            max: 50
                         }
                     }
                 }
@@ -609,6 +520,8 @@
                                 text: 'Contribution Rate (%)',
                                 font: { size: 12 }
                             },
+                            min: 0,
+                            max: 50,
                             grid: {
                                 drawOnChartArea: false
                             }
@@ -645,116 +558,6 @@
             charts.projection.update();
         }
         
-        // Impact Chart
-        function createImpactChart() {
-            const ctx = document.getElementById('impactChart').getContext('2d');
-            
-            charts.impact = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: 'Pension Bill (£m)',
-                            data: [],
-                            backgroundColor: '#667eea',
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: '% of Total Expenditure',
-                            data: [],
-                            backgroundColor: '#764ba2',
-                            yAxisID: 'y1',
-                            type: 'line',
-                            borderColor: '#764ba2',
-                            borderWidth: 3,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Projected Pension Costs',
-                            font: { size: 16, weight: 'bold' }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            position: 'left',
-                            title: {
-                                display: true,
-                                text: 'Pension Bill (£ million)',
-                                font: { size: 12 }
-                            }
-                        },
-                        y1: {
-                            type: 'linear',
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: '% of Total Expenditure',
-                                font: { size: 12 }
-                            },
-                            grid: {
-                                drawOnChartArea: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function calculateImpact() {
-            const payroll = parseFloat(document.getElementById('payrollInput').value);
-            const expenditure = parseFloat(document.getElementById('expenditureInput').value);
-            
-            const currentYear = 2024;
-            const years = [];
-            const pensionBills = [];
-            const percentages = [];
-            
-            let currentScape = parseFloat(document.getElementById('scapeSlider').value);
-            
-            const tableBody = document.getElementById('impactTableBody');
-            tableBody.innerHTML = '';
-            
-            for (let i = 0; i <= 10; i++) {
-                const year = currentYear + i;
-                const contribRate = predictRate(currentScape) / 100;
-                const pensionBill = payroll * contribRate;
-                const percentage = (pensionBill / expenditure) * 100;
-                
-                years.push(year);
-                pensionBills.push(pensionBill.toFixed(2));
-                percentages.push(percentage.toFixed(2));
-                
-                const row = tableBody.insertRow();
-                row.insertCell(0).textContent = year;
-                row.insertCell(1).textContent = (contribRate * 100).toFixed(2) + '%';
-                row.insertCell(2).textContent = '£' + pensionBill.toFixed(2);
-                row.insertCell(3).textContent = percentage.toFixed(2) + '%';
-                
-                // Small drift for projection
-                currentScape = Math.max(0.5, Math.min(4.0, currentScape - 0.05));
-            }
-            
-            charts.impact.data.labels = years;
-            charts.impact.data.datasets[0].data = pensionBills;
-            charts.impact.data.datasets[1].data = percentages;
-            charts.impact.update();
-        }
-        
-        function loadNorthumbriaData() {
-            document.getElementById('payrollInput').value = 65;
-            document.getElementById('expenditureInput').value = 250;
-            calculateImpact();
-        }
-        
         function exportChart(chartId, filename) {
             const canvas = document.getElementById(chartId);
             const url = canvas.toDataURL('image/png');
@@ -780,8 +583,6 @@
             createHistoricalChart();
             createScenarioChart();
             createProjectionChart();
-            createImpactChart();
-            calculateImpact();
         });
     </script>
 </body>
